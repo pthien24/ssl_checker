@@ -1,0 +1,17 @@
+.domain-link {
+  color: #007bff;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.domain-link:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+.domain-link i {
+  font-size: 0.8em;
+  opacity: 0.7;
+}
