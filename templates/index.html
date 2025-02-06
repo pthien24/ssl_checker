@@ -18,14 +18,31 @@
             <div class="col-md-8">
                 <div class="card">
                     <div class="card-body">
-                        <form id="sslCheckForm">
+                        <div class="tabs">
+                            <button class="tab-button active" onclick="switchTab('check')">Kiểm tra SSL</button>
+                            <button class="tab-button" onclick="switchTab('history')">Lịch sử</button>
+                        </div>
+
+                        <div id="check-tab" class="tab-content active">
+                            <form id="sslCheckForm">
+                                <div class="mb-3">
+                                    <label for="domains" class="form-label">Domain List (separated by commas)</label>
+                                    <textarea class="form-control" id="domains" name="domains" rows="4"
+                                        placeholder="example.com, google.com, facebook.com"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Check SSL</button>
+                            </form>
+                        </div>
+
+                        <div id="history-tab" class="tab-content">
+                            <div id="history-results"></div>
+                        </div>
+                        <div id="history-input" class="tab-content">
                             <div class="mb-3">
-                                <label for="domains" class="form-label">Domain List (separated by commas)</label>
-                                <textarea class="form-control" id="domains" name="domains" rows="4"
-                                    placeholder="example.com, google.com, facebook.com"></textarea>
+                                <label for="history-text" class="form-label">Lịch sử nhập</label>
+                                <textarea class="form-control" id="history-text" rows="4" readonly></textarea>
                             </div>
-                            <button type="submit" class="btn btn-primary">Check SSL</button>
-                        </form>
+                        </div>
                     </div>
                 </div>
 
@@ -41,6 +58,88 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            if (tabName === 'history') {
+                loadHistory();
+            }
+        }
+
+        function loadHistory() {
+            fetch('/get_history')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.history.length === 0) {
+                        document.getElementById('history-results').innerHTML = '<p>Chưa có lịch sử kiểm tra</p>';
+                        return;
+                    }
+
+                    const historyHtml = data.history.map(domain => `
+                        <div class="history-item" onclick="checkHistoryDomain('${domain}')">
+                            ${domain}
+                        </div>
+                    `).join('');
+                    document.getElementById('history-results').innerHTML = historyHtml;
+                });
+        }
+
+        function checkHistoryDomain(domain) {
+            // Chuyển về tab kiểm tra
+            switchTab('check');
+            // Điền domain vào ô input
+            document.getElementById('domains').value = domain;
+            // Tự động submit form
+            document.getElementById('sslCheckForm').submit();
+        }
+    </script>
+
+    <style>
+        .tabs {
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .tab-button.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .history-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #fff;
+        }
+
+        .history-item:hover {
+            background-color: #f8f9fa;
+            border-color: #007bff;
+        }
+    </style>
 </body>
 
 </html>

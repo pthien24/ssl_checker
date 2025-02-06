@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, make_response
 import ssl
 import socket
 import datetime
 import concurrent.futures
 from urllib.parse import urlparse
+import json
 
 app = Flask(__name__)
 
@@ -61,11 +62,38 @@ def check_ssl():
     if not domains:
         return jsonify({'error': 'No domains provided'})
     
-    # Sử dụng thread pool để check nhiều domain cùng lúc
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         results = list(executor.map(get_ssl_info, domains))
     
-    return jsonify({'results': results})
+    # Lấy lịch sử hiện tại từ cookie
+    history = request.cookies.get('ssl_history', '[]')
+    try:
+        history = json.loads(history)
+    except:
+        history = []
+    
+    # Thêm domain mới vào lịch sử (không trùng lặp)
+    for domain in domains:
+        if domain not in history:
+            history.insert(0, domain)  # Thêm vào đầu danh sách
+    
+    # Giới hạn lịch sử 20 domain gần nhất
+    history = history[:20]
+    
+    # Tạo response với kết quả và cập nhật cookie
+    response = make_response(jsonify({'results': results}))
+    response.set_cookie('ssl_history', json.dumps(history), max_age=30*24*60*60)  # Cookie hết hạn sau 30 ngày
+    
+    return response
+
+@app.route('/get_history')
+def get_history():
+    history = request.cookies.get('ssl_history', '[]')
+    try:
+        history = json.loads(history)
+    except:
+        history = []
+    return jsonify({'history': history})
 
 if __name__ == '__main__':
     app.run(debug=True) 
